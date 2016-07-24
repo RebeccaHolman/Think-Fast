@@ -1,0 +1,24 @@
+   body {
+        /* set margin to 0 and overflow to hidden, to go fullscreen */
+        margin: 0;
+        overflow: hidden;
+    }
+    #timer{
+    	font-family: "Lucida Console";
+        position:absolute;
+        top: 1%;
+        left:75%;
+        padding: 5px;
+        font-size: 2em;
+    }
+    #endtext{
+    	font-family: "Lucida Console";
+    	color: #00afd6;
+    	text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+        position:absolute;
+        top: 30%;
+        left: 27%;
+        text-align: center;
+        padding: 5px;
+        visibility: hidden;
+    }

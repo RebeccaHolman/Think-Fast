@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html>
+<style>
+    body {
+        /* set margin to 0 and overflow to hidden, to go fullscreen */
+        margin: 0;
+        overflow: hidden;
+    }
+    .arrows{
+    	font-family: "Lucida Console";
+    	color: #00afd6;
+    	text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+        position:absolute;
+        top: 60%;
+        left: 40%;
+        text-align: center;
+        padding: 5px;
+    }
+    #instructions{
+        font-family: "Lucida Console";
+        color: #00afd6;
+        text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+        position:absolute;
+        top: 30%;
+        text-align: center;
+        padding: 5px;
+    }
+</style>
+
+<head>
+    <title>Zoom Zoom</title>
+
+
+    <script type="text/javascript" src="../libs/three.js"></script>
+    <script type="text/javascript" src="../libs/stats.js"></script>
+    <script type="text/javascript" src="../libs/physi.js"></script>
+    <script type="text/javascript" src="../libs/chroma.js"></script>
+    <script type="text/javascript" src="../libs/dat.gui.js"></script>
+
+
+    <script type="text/javascript">
+
+        'use strict';
+
+        var scale = chroma.scale(['green', 'white']);
+
+        Physijs.scripts.worker = '../libs/physijs_worker.js';
+        Physijs.scripts.ammo = '../libs/ammo.js';
+
+        var initScene, render, ground_material, box_material, renderer, render_stats, scene, ground, groundHeight, light, camera, box, wall1, wall2, skyboxMesh, groundVelocity;
+        //Sets the initial instruction page to the first one
+        var pageCount = 0;
+
+        //A simplified version of the game's scene
+		initScene = function () {
+
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            renderer.setClearColor(new THREE.Color(0x9F0F00));
+            document.getElementById('viewport').appendChild(renderer.domElement);
+
+            render_stats = new Stats();
+            render_stats.domElement.style.position = 'absolute';
+            render_stats.domElement.style.top = '1px';
+            render_stats.domElement.style.zIndex = 100;
+            document.getElementById('viewport').appendChild(render_stats.domElement);
+		
+
+            scene = new Physijs.Scene;
+            scene.setGravity(new THREE.Vector3(0, -20, 0));
+			
+			var path = "SkyBox/";
+			 var format = '.png';
+			 var urls = [
+				 path + 'px' + format, path + 'nx' + format,
+				 path + 'py' + format, path + 'ny' + format,
+				 path + 'pz' + format, path + 'nz' + format
+			 ];
+
+			 var textureCube = THREE.ImageUtils.loadTextureCube( urls );
+			 
+			 var shader = THREE.ShaderLib[ "cube" ];
+			 shader.uniforms[ "tCube" ].value = textureCube;
+
+			 var skymaterial = new THREE.ShaderMaterial( {
+				 fragmentShader: shader.fragmentShader,
+				 vertexShader: shader.vertexShader,
+				 uniforms: shader.uniforms,
+				 depthWrite: false,
+				 side: THREE.BackSide
+				 }
+			);
+			
+			skyboxMesh = new THREE.Mesh(new THREE.BoxGeometry(1000, 1000, 1000), skymaterial);
+			scene.add(skyboxMesh);
+
+            camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 1000);
+
+            camera.position.set(50, 10, 0);
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+            scene.add(camera);
+			
+			light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 )
+            light.position.set(400, 1000, 0);
+            scene.add(light);
+		
+			groundVelocity = 3;
+			createGround();
+            scene.add(ground);
+
+            requestAnimationFrame(render);
+
+        };
+
+        var stepX;
+
+        render = function () {
+            //Sets the instructions to the first page
+            newPage();
+
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+            render_stats.update();
+			update();
+            scene.simulate(undefined, 1);
+        };
+
+        function createGround() {
+            var texture = THREE.ImageUtils.loadTexture('images/asphaltPink.png');
+			var material_image = new THREE.MeshPhongMaterial({map: texture});
+			var ground_material = Physijs.createMaterial(material_image, 0.6, 0.0);
+
+			groundHeight = 1;
+            ground = new Physijs.BoxMesh(new THREE.BoxGeometry(20000, groundHeight, 60), ground_material, 0);
+			
+			ground.position.x = -9900;
+			ground.position.y = 0;
+			ground.position.z = 0;
+        }
+
+        function update() {
+            ground.__dirtyPosition = true;
+            ground.position.x += groundVelocity;        
+        }
+
+        window.onload = initScene;
+
+
+        //Switches the instruction page to the previous one
+        function previous(){
+            pageCount = pageCount - 1;
+            newPage();
+        }
+
+        //Switches the instruction page to the next one
+        function next(){
+            pageCount = pageCount + 1;
+            newPage();
+        }
+
+        function newPage(){
+            //Changes the content of the instruction screen depending on the pageCount value
+            switch(pageCount){
+                case 0:
+                    document.getElementById("instructions").innerHTML = "Welcome to Think Fast, the game of fast-paced log dodging.<br>The goal is to get to the end of the track with the lowest possible time, <br>but without getting knocked off the screen by one of our many Sphere Disruption Logs&trade;.";
+                    document.getElementById("instructions").style.left = "0%";
+                    break;
+                case 1:
+                    document.getElementById("instructions").innerHTML = "There are three objects you will encounter on the track."
+                        +"<br>Sphere Disruption Logs&trade;: Avoid these logs at all costs. Collision with them will slow you down and could knock you off the track."
+                        +"<br>Sm&ouml;l Logs: These logs are unusually short, and can be jumped over using the spacebar."
+                        +"<br>Speed Up Bars: These bars are a Good Thing&trade;. Rolling over one of these will result in a speedup.";
+                    document.getElementById("instructions").style.left = "0%";
+                    break;                    
+                case 2:
+                    document.getElementById("instructions").innerHTML = "Controls:<br>Left: Left Arrow Key<br>Right: Right Arrow Key<br>Jump: Spacebar"
+                    //Makes the text closer to the center
+                    document.getElementById("instructions").style.left = "35%";
+                    break;
+            }
+
+            //Changes the visibility of the previous and next buttons depending on which page of the instructions you are currently on
+            if(pageCount === 0){
+                document.getElementById('prev').style.visibility="hidden";
+            }
+            else if(pageCount == 1){
+                document.getElementById('prev').style.visibility="visible";
+                document.getElementById('next').style.visibility="visible";
+            }
+            else if(pageCount == 2){
+                document.getElementById('next').style.visibility="hidden";
+            }
+        }
+
+    </script>
+</head>
+
+<body>
+<div id="viewport">
+    <h1 id="instructions"></h1>
+    <div class="arrows">
+    <!--The arrows for scrolling through the instructions-->
+	<h2 id="prev" onclick="previous()" onmouseover="this.style.cursor='pointer';">
+		<- Previous
+	</h2>
+
+	<h2 id="next" onclick="next()" onmouseover="this.style.cursor='pointer';">
+		Next ->
+	</h2>
+
+    <!--The start button-->
+    <h2 onclick="location.replace('game.html')" onmouseover="this.style.cursor='pointer';">
+        Click Here To Start
+    </h2>
+    </div>
+</div>
+
+</body>
+
+</html>
+
